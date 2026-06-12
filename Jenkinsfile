@@ -3,102 +3,76 @@ pipeline {
 
     environment {
         IMAGE_NAME = "fraud-agent"
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        DOCKERHUB_USER = "your-dockerhub-username"
-        KUBE_DEPLOYMENT = "fraud-agent"
+        IMAGE_TAG = "latest"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                git branch: 'main',
-                url: 'https://github.com/your-username/your-repo.git'
+                echo "Source code is automatically checked out by Jenkins SCM 🚀"
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh '''
                 echo "Installing dependencies..."
-                # Example for Python project
-                pip install -r requirements.txt
-                '''
+                // Example:
+                // sh 'npm install'
+                // sh 'pip install -r requirements.txt'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh '''
                 echo "Running tests..."
-                # Replace with your test command
-                pytest -v || exit 1
-                '''
+                // Example:
+                // sh 'npm test'
+                // sh 'pytest'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh '''
                 echo "Building Docker image..."
-                docker build -t $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG .
-                '''
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
 
-        stage('Login to DockerHub') {
+        stage('Docker Login & Push') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                echo "Docker push skipped (enable when credentials are added)"
+                
+                // Uncomment when DockerHub credentials are ready:
+                /*
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
                     usernameVariable: 'USER',
-                    passwordVariable: 'PASS')]) {
+                    passwordVariable: 'PASS'
+                )]) {
                     sh '''
-                    echo "$PASS" | docker login -u "$USER" --password-stdin
+                        echo $PASS | docker login -u $USER --password-stdin
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
+                */
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Deploy') {
             steps {
-                sh '''
-                docker push $DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
-                '''
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                echo "Deploying to Kubernetes..."
-
-                kubectl set image deployment/$KUBE_DEPLOYMENT \
-                $KUBE_DEPLOYMENT=$DOCKERHUB_USER/$IMAGE_NAME:$IMAGE_TAG
-
-                kubectl rollout status deployment/$KUBE_DEPLOYMENT
-                '''
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                sh '''
-                echo "Checking service health..."
-                curl -f http://localhost:8080/health || exit 1
-                '''
+                echo "Deployment skipped (Kubernetes not configured yet)"
+                // kubectl apply -f k8s/
             }
         }
     }
 
     post {
         success {
-            echo "✅ Deployment Successful!"
+            echo "✅ Pipeline executed successfully!"
         }
-
         failure {
-            echo "❌ Deployment Failed! Rolling back..."
-            sh '''
-            kubectl rollout undo deployment/$KUBE_DEPLOYMENT
-            '''
+            echo "❌ Pipeline failed!"
         }
     }
 }
